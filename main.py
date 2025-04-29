@@ -2,7 +2,8 @@ import os
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, 
                              QFileDialog, QLabel, QVBoxLayout, QWidget, 
-                             QMessageBox, QHBoxLayout, QFrame, QSizePolicy)
+                             QMessageBox, QHBoxLayout, QFrame, QSizePolicy,
+                             QLineEdit, QInputDialog, QScrollArea)
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtCore import QUrl, QTimer, Qt, QSize
@@ -12,12 +13,13 @@ class VideoCategorizerApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Video Categorizer Pro")
-        self.setGeometry(100, 100, 1000, 700)
+        self.setGeometry(100, 100, 1000, 750)
         
         # Initialize variables
         self.current_video_index = 0
         self.video_files = []
         self.source_folder = ""
+        self.custom_categories = []  # Store custom categories
         
         # Set application style
         self.set_style()
@@ -95,6 +97,38 @@ class VideoCategorizerApp(QMainWindow):
                 background-color: #454545;
                 border-radius: 5px;
             }
+            #custom_categories_frame {
+                background-color: #454545;
+                border-radius: 10px;
+            }
+            QScrollArea {
+                border: none;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: #454545;
+                width: 10px;
+                margin: 0px 0px 0px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #6a6a6a;
+                min-height: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+                subcontrol-position: bottom;
+                subcontrol-origin: margin;
+            }
+            QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 0px;
+                subcontrol-position: top;
+                subcontrol-origin: margin;
+            }
         """)
 
     def create_ui(self):
@@ -138,12 +172,12 @@ class VideoCategorizerApp(QMainWindow):
         video_frame.setLayout(video_layout)
         main_layout.addWidget(video_frame, 1)
         
-        # Category buttons frame
-        category_frame = QFrame()
-        category_frame.setObjectName("category_frame")
-        category_layout = QHBoxLayout()
-        category_layout.setContentsMargins(20, 15, 20, 15)
-        category_layout.setSpacing(20)
+        # Default category buttons frame
+        default_category_frame = QFrame()
+        default_category_frame.setObjectName("category_frame")
+        default_category_layout = QHBoxLayout()
+        default_category_layout.setContentsMargins(20, 15, 20, 15)
+        default_category_layout.setSpacing(20)
         
         # Travel button
         self.travel_button = QPushButton("✈️ Travel")
@@ -151,7 +185,7 @@ class VideoCategorizerApp(QMainWindow):
         self.travel_button.setFixedHeight(50)
         self.travel_button.clicked.connect(lambda: self.categorize_video("travel"))
         self.travel_button.setEnabled(False)
-        category_layout.addWidget(self.travel_button)
+        default_category_layout.addWidget(self.travel_button)
         
         # Food button
         self.food_button = QPushButton("🍔 Food")
@@ -159,7 +193,7 @@ class VideoCategorizerApp(QMainWindow):
         self.food_button.setFixedHeight(50)
         self.food_button.clicked.connect(lambda: self.categorize_video("food"))
         self.food_button.setEnabled(False)
-        category_layout.addWidget(self.food_button)
+        default_category_layout.addWidget(self.food_button)
         
         # Idea button
         self.idea_button = QPushButton("💡 Idea")
@@ -167,12 +201,64 @@ class VideoCategorizerApp(QMainWindow):
         self.idea_button.setFixedHeight(50)
         self.idea_button.clicked.connect(lambda: self.categorize_video("idea"))
         self.idea_button.setEnabled(False)
-        category_layout.addWidget(self.idea_button)
+        default_category_layout.addWidget(self.idea_button)
         
-        category_frame.setLayout(category_layout)
-        main_layout.addWidget(category_frame)
+        default_category_frame.setLayout(default_category_layout)
+        main_layout.addWidget(default_category_frame)
+        
+        # Custom categories section
+        custom_cat_frame = QFrame()
+        custom_cat_frame.setObjectName("custom_categories_frame")
+        custom_cat_layout = QVBoxLayout()
+        custom_cat_layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Add custom category button
+        self.add_category_btn = QPushButton("➕ Add Custom Category")
+        self.add_category_btn.setFixedHeight(40)
+        self.add_category_btn.clicked.connect(self.add_custom_category)
+        custom_cat_layout.addWidget(self.add_category_btn)
+        
+        # Custom categories buttons container
+        self.custom_categories_container = QWidget()
+        self.custom_categories_layout = QHBoxLayout()
+        self.custom_categories_layout.setContentsMargins(0, 10, 0, 0)
+        self.custom_categories_layout.setSpacing(15)
+        self.custom_categories_container.setLayout(self.custom_categories_layout)
+        
+        # Scroll area for custom categories
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(self.custom_categories_container)
+        custom_cat_layout.addWidget(scroll_area)
+        
+        custom_cat_frame.setLayout(custom_cat_layout)
+        main_layout.addWidget(custom_cat_frame)
         
         main_widget.setLayout(main_layout)
+
+    def add_custom_category(self):
+        text, ok = QInputDialog.getText(self, 'Add Custom Category', 
+                                        'Enter category name:')
+        if ok and text:
+            if text.lower() in ['travel', 'food', 'idea']:
+                QMessageBox.warning(self, "Error", "This is a default category!")
+                return
+                
+            if text not in self.custom_categories:
+                self.custom_categories.append(text)
+                self.create_custom_category_button(text)
+            else:
+                QMessageBox.warning(self, "Error", "Category already exists!")
+
+    def create_custom_category_button(self, category_name):
+        btn = QPushButton(f"⭐ {category_name}")
+        btn.setFixedHeight(45)
+        btn.clicked.connect(lambda: self.categorize_video(category_name))
+        self.custom_categories_layout.addWidget(btn)
+        
+        # Enable buttons if we have videos
+        if self.video_files:
+            btn.setEnabled(True)
 
     def open_folder_dialog(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder with Videos")
@@ -194,9 +280,11 @@ class VideoCategorizerApp(QMainWindow):
             self.current_video_index = 0
             self.play_current_video()
             self.enable_category_buttons(True)
+            self.enable_custom_category_buttons(True)
         else:
             self.status_label.setText("No video files found in selected folder")
             self.enable_category_buttons(False)
+            self.enable_custom_category_buttons(False)
     
     def play_current_video(self):
         if self.current_video_index < len(self.video_files):
@@ -280,6 +368,7 @@ class VideoCategorizerApp(QMainWindow):
                 self.media_player.stop()
                 self.status_label.setText("No more videos in folder")
                 self.enable_category_buttons(False)
+                self.enable_custom_category_buttons(False)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to move file: {str(e)}\n\nFile might still be in use. Trying again...")
             QTimer.singleShot(500, lambda: self.perform_file_move(src_path, dest_path, category, current_file))
@@ -288,6 +377,12 @@ class VideoCategorizerApp(QMainWindow):
         self.travel_button.setEnabled(enabled)
         self.food_button.setEnabled(enabled)
         self.idea_button.setEnabled(enabled)
+    
+    def enable_custom_category_buttons(self, enabled):
+        for i in range(self.custom_categories_layout.count()):
+            widget = self.custom_categories_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.setEnabled(enabled)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
